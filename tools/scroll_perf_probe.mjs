@@ -1,8 +1,8 @@
-import http from 'node:http';
-import { spawn } from 'node:child_process';
-import { readFileSync, statSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { spawn } from "node:child_process";
+import { readFileSync, statSync } from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,14 +38,14 @@ class CDP {
     this.nextId = 1;
     this.pending = new Map();
     this.listeners = new Map(); // key: `${sessionId||''}:${method}`
-    this.ws.addEventListener('message', (ev) => this.onMessage(ev.data));
+    this.ws.addEventListener("message", (ev) => this.onMessage(ev.data));
   }
 
   async ready() {
     if (this.ws.readyState === WebSocket.OPEN) return;
     await new Promise((resolve, reject) => {
-      this.ws.addEventListener('open', resolve, { once: true });
-      this.ws.addEventListener('error', reject, { once: true });
+      this.ws.addEventListener("open", resolve, { once: true });
+      this.ws.addEventListener("error", reject, { once: true });
     });
   }
 
@@ -55,14 +55,14 @@ class CDP {
       const p = this.pending.get(msg.id);
       if (p) {
         this.pending.delete(msg.id);
-        if (msg.error) p.reject(new Error(msg.error.message || 'CDP error'));
+        if (msg.error) p.reject(new Error(msg.error.message || "CDP error"));
         else p.resolve(msg.result);
       }
       return;
     }
 
     if (!msg.method) return;
-    const sid = msg.sessionId || '';
+    const sid = msg.sessionId || "";
     const key = `${sid}:${msg.method}`;
     const list = this.listeners.get(key);
     if (list) {
@@ -81,8 +81,8 @@ class CDP {
     });
   }
 
-  on(method, fn, sessionId = '') {
-    const sid = sessionId || '';
+  on(method, fn, sessionId = "") {
+    const sid = sessionId || "";
     const key = `${sid}:${method}`;
     const list = this.listeners.get(key) || [];
     list.push(fn);
@@ -125,38 +125,38 @@ class CDP {
 
 function makeStaticServer(rootDir) {
   const server = http.createServer((req, res) => {
-    const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
-    const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, '');
-    const rel = safePath === '/' ? '/index.html' : safePath;
+    const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
+    const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
+    const rel = safePath === "/" ? "/index.html" : safePath;
     const filePath = path.join(rootDir, rel);
 
     try {
       const st = statSync(filePath);
       if (!st.isFile()) {
         res.writeHead(404);
-        res.end('Not found');
+        res.end("Not found");
         return;
       }
 
       const ext = path.extname(filePath).toLowerCase();
       const ctype =
-        ext === '.html'
-          ? 'text/html; charset=utf-8'
-          : ext === '.js'
-            ? 'application/javascript; charset=utf-8'
-            : ext === '.css'
-              ? 'text/css; charset=utf-8'
-              : ext === '.md'
-                ? 'text/markdown; charset=utf-8'
-                : 'application/octet-stream';
+        ext === ".html"
+          ? "text/html; charset=utf-8"
+          : ext === ".js"
+            ? "application/javascript; charset=utf-8"
+            : ext === ".css"
+              ? "text/css; charset=utf-8"
+              : ext === ".md"
+                ? "text/markdown; charset=utf-8"
+                : "application/octet-stream";
 
-      res.setHeader('Content-Type', ctype);
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader("Content-Type", ctype);
+      res.setHeader("Cache-Control", "no-store");
       res.writeHead(200);
       res.end(readFileSync(filePath));
     } catch {
       res.writeHead(404);
-      res.end('Not found');
+      res.end("Not found");
     }
   });
 
@@ -171,50 +171,50 @@ function metricsToMap(metricsResult) {
 }
 
 async function main() {
-  const rootDir = path.resolve(__dirname, '..');
+  const rootDir = path.resolve(__dirname, "..");
   const server = makeStaticServer(rootDir);
 
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   const url = `http://127.0.0.1:${port}/index.html`;
 
   const chromeArgs = [
-    '--headless=new',
-    '--remote-debugging-port=9222',
+    "--headless=new",
+    "--remote-debugging-port=9222",
     `--user-data-dir=/tmp/raptorq_article_chrome_profile_${Date.now()}`,
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-background-networking',
-    '--disable-default-apps',
-    '--disable-extensions',
-    '--disable-sync',
-    '--disable-translate',
-    '--hide-scrollbars',
-    '--mute-audio',
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--disable-background-networking",
+    "--disable-default-apps",
+    "--disable-extensions",
+    "--disable-sync",
+    "--disable-translate",
+    "--hide-scrollbars",
+    "--mute-audio",
   ];
 
-  const chrome = spawn('/usr/bin/google-chrome', chromeArgs, { stdio: 'ignore' });
+  const chrome = spawn("/usr/bin/google-chrome", chromeArgs, { stdio: "ignore" });
 
   let cdp;
   try {
-    const version = await waitForJson('http://127.0.0.1:9222/json/version');
+    const version = await waitForJson("http://127.0.0.1:9222/json/version");
     cdp = new CDP(version.webSocketDebuggerUrl);
     await cdp.ready();
 
-    const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
-    const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
+    const { targetId } = await cdp.send("Target.createTarget", { url: "about:blank" });
+    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
 
-    await cdp.send('Page.enable', {}, sessionId);
-    await cdp.send('Runtime.enable', {}, sessionId);
-    await cdp.send('Performance.enable', {}, sessionId);
+    await cdp.send("Page.enable", {}, sessionId);
+    await cdp.send("Runtime.enable", {}, sessionId);
+    await cdp.send("Performance.enable", {}, sessionId);
 
-    await cdp.send('Page.navigate', { url }, sessionId);
-    await cdp.waitForEvent('Page.loadEventFired', sessionId, 30000);
+    await cdp.send("Page.navigate", { url }, sessionId);
+    await cdp.waitForEvent("Page.loadEventFired", sessionId, 30000);
 
     // Let MathJax + hero init settle.
     await delay(2500);
 
-    const metricsBefore = metricsToMap(await cdp.send('Performance.getMetrics', {}, sessionId));
+    const metricsBefore = metricsToMap(await cdp.send("Performance.getMetrics", {}, sessionId));
 
     // Measure: rAF deltas + longtasks while we programmatically scroll.
     const measureExpr = `(async () => {
@@ -282,7 +282,7 @@ async function main() {
     })()`;
 
     const out = await cdp.send(
-      'Runtime.evaluate',
+      "Runtime.evaluate",
       {
         expression: measureExpr,
         awaitPromise: true,
@@ -293,7 +293,7 @@ async function main() {
 
     const value = out?.result?.value ?? out?.result ?? out?.value ?? out;
 
-    const metricsAfter = metricsToMap(await cdp.send('Performance.getMetrics', {}, sessionId));
+    const metricsAfter = metricsToMap(await cdp.send("Performance.getMetrics", {}, sessionId));
     const metricsDelta = {};
     const keys = new Set([...Object.keys(metricsBefore), ...Object.keys(metricsAfter)]);
     for (const k of keys) metricsDelta[k] = (metricsAfter[k] ?? 0) - (metricsBefore[k] ?? 0);
@@ -311,7 +311,7 @@ async function main() {
     );
   } finally {
     if (cdp) cdp.close();
-    chrome.kill('SIGKILL');
+    chrome.kill("SIGKILL");
     server.close();
   }
 }
